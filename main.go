@@ -19,8 +19,13 @@ func main() {
 
 	api := r.PathPrefix("/api").Subrouter()
 
-	api.HandleFunc("/category", controllers.CreateCategory).Methods("POST")
-	api.HandleFunc("/book", controllers.Book).Methods("GET")
+	// GET All data book
+	api.HandleFunc("/books", controllers.Book).Methods("GET")
+
+	// GET data book by ID
+	api.HandleFunc("/book/{book_id}", controllers.GetBook).Methods("GET")
+
+	// POST data book for create new book
 	api.HandleFunc("/book", controllers.CreateBook).Methods("POST")
 
 	api.Use(middlewares.JWTMiddleware)

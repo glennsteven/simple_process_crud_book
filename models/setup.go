@@ -14,7 +14,7 @@ func ConnectDatabase() {
 		panic(err)
 	}
 
-	err = database.AutoMigrate(&User{}, &Books{}, &Categories{})
+	err = database.AutoMigrate(&User{}, &Books{}, &Categories{}, BookCategory{})
 	if err != nil {
 		log.Println(err)
 		return
