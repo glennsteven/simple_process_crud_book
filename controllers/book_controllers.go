@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"asis_quest/config/consts"
 	"asis_quest/helper"
 	"asis_quest/models"
 	"asis_quest/presentation"
@@ -28,7 +29,6 @@ func Book(w http.ResponseWriter, _ *http.Request) {
 			ID:          fetchBook.ID,
 			Title:       fetchBook.Title,
 			Description: fetchBook.Description,
-			Category:    nil,
 			Keyword:     fetchBook.Keyword,
 			Price:       rupiah,
 			Stock:       fetchBook.Stock,
@@ -37,15 +37,22 @@ func Book(w http.ResponseWriter, _ *http.Request) {
 			UpdatedAt:   fetchBook.UpdatedAt,
 		}
 
-		for _, bc := range fetchBook.BookCategory {
+		var bookCategory []models.BookCategory
+		if err := models.DB.Where("book_id = ?", fetchBook.ID).Find(&bookCategory).Error; err != nil {
+			helper.ResponseError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		for _, c := range bookCategory {
 			var category models.Categories
-			if err := models.DB.Where("id = ?", bc.CategoryID).Find(&category).Error; err != nil {
+			if err := models.DB.Where("id = ?", c.CategoryID).Find(&category).Error; err != nil {
 				helper.ResponseError(w, http.StatusInternalServerError, err.Error())
 				return
 			}
 
 			resp.Category = append(resp.Category, category.Category)
 		}
+
 		response.Data = append(response.Data, resp)
 	}
 
@@ -68,8 +75,7 @@ func CreateBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer r.Body.Close()
-	var existingBook models.Books
-	if err := models.DB.Where("title = ?", payload.Title).First(&existingBook).Error; err != nil {
+	if err := models.DB.First(&book, "title = ?", payload.Title).Error; err == nil {
 		response := map[string]string{"message": "data book already exist"}
 		helper.ResponseJSON(w, http.StatusConflict, response)
 		return
@@ -96,8 +102,8 @@ func CreateBook(w http.ResponseWriter, r *http.Request) {
 		if err := models.DB.Where("category = ?", categoryName).First(&category).Error; err != nil {
 			category = models.Categories{
 				Category:  categoryName,
-				CreatedAt: time.Now().Format(`2006-01-02 15:04:05`),
-				UpdatedAt: time.Now().Format(`2006-01-02 15:04:05`),
+				CreatedAt: time.Now().Format(consts.FormatDateIDN),
+				UpdatedAt: time.Now().Format(consts.FormatDateIDN),
 			}
 			if err := models.DB.Create(&category).Error; err != nil {
 				helper.ResponseError(w, http.StatusInternalServerError, err.Error())
@@ -139,12 +145,47 @@ func CreateBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetBook(w http.ResponseWriter, r *http.Request) {
-	var book models.Books
+	var (
+		book     models.Books
+		response presentation.Response
+	)
+
 	bookID := mux.Vars(r)["book_id"]
 	if err := models.DB.Where("id = ?", bookID).First(&book).Error; err != nil {
 		helper.ResponseError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	helper.ResponseJSON(w, http.StatusOK, book)
+	rupiah := helper.Accounting(book.Price)
+	response.Code = http.StatusOK
+	response.Message = "Successfully get book"
+	response.Data = presentation.Data{
+		ID:          book.ID,
+		Title:       book.Title,
+		Description: book.Description,
+		Keyword:     book.Keyword,
+		Price:       rupiah,
+		Stock:       book.Stock,
+		Publisher:   book.Publisher,
+		CreatedAt:   book.CreatedAt,
+		UpdatedAt:   book.UpdatedAt,
+	}
+
+	var bookCategory []models.BookCategory
+	if err := models.DB.Where("book_id = ?", book.ID).Find(&bookCategory).Error; err != nil {
+		helper.ResponseError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	for _, c := range bookCategory {
+		var category models.Categories
+		if err := models.DB.Where("id = ?", c.CategoryID).Find(&category).Error; err != nil {
+			helper.ResponseError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		response.Data.Category = append(response.Data.Category, category.Category)
+	}
+
+	helper.ResponseJSON(w, http.StatusOK, response)
 }
