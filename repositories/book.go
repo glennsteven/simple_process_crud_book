@@ -86,3 +86,24 @@ func (n *newBook) FindID(where models.Books) (*models.Books, error) {
 
 	return result, nil
 }
+
+func (n *newBook) Update(id int64, update models.Books) (*models.Books, error) {
+	var (
+		result *models.Books
+		err    error
+	)
+
+	database, err := n.db.ConnectDatabase()
+	if err != nil {
+		return nil, err
+	}
+
+	err = database.Where("id = ?", id).Updates(&update).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result = &update
+
+	return result, nil
+}
