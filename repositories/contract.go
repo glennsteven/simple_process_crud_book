@@ -12,6 +12,7 @@ type Book interface {
 	Store(insert models.Books) (*models.Books, error)
 	FindOne(where models.Books) (*models.Books, error)
 	FindID(where models.Books) (*models.Books, error)
+	Update(id int64, update models.Books) (*models.Books, error)
 }
 
 type Category interface {

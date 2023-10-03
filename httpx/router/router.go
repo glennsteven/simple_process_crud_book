@@ -42,5 +42,10 @@ func Router(r *mux.Router) {
 		book.ListBook,
 	).Methods("GET")
 
+	// PUT data book by ID
+	api.HandleFunc("/book/{id}",
+		book.UpdateBook,
+	).Methods("PUT")
+
 	api.Use(middlewares.JWTMiddleware)
 }
